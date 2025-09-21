@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: line-webhook
+    env: python
+    buildCommand: ""
+    startCommand: python app.py
+    envVars:
+      - key: ACCESS_TOKEN
+        value: 1eWjiMP/MusTUmfEnR9mo48kJNHHJLmz+C0c8v+74ogqym1YGRryOLQWcASizMORchMZLqw1PnunoZr8CnfDzgLeF2wUF46o3Cx7wFKt6GXftfYzDwbcxlh9RXYvZr9sfHOI2EzCUzHcw9BiSQf39wdB04t89/1O/w1cDnyilFU=
