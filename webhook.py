@@ -7,7 +7,7 @@ openai.api_key = os.environ.get("OPENAI_API_KEY")
 
 def get_ai_reply(user_text):
     response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",  # 無料枠でも使えるモデル
+        model="openai/gpt-4o",  # 無料枠でも使えるモデル
         messages=[
             {"role": "system", "content": "あなたはLINE Botとして、親切で賢く、簡潔にユーザーの質問に答えます。"},
             {"role": "user", "content": user_text}
