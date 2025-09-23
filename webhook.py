@@ -7,15 +7,20 @@ import os
 openai.api_key = os.environ.get("OPENAI_API_KEY")
 
 
+from openai import OpenAI
+
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
 def get_ai_reply(user_text):
-    response = openai.ChatCompletion.create(
+    chat_completion = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "あなたはLINE Botとして、親切で賢く、簡潔にユーザーの質問に答えます。"},
             {"role": "user", "content": user_text}
         ]
     )
-    return response.choices[0].message.content
+    return chat_completion.choices[0].message.content
+
 
 
 app = Flask(__name__)
