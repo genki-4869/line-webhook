@@ -8,6 +8,7 @@ openai.api_key = os.environ.get("OPENAI_API_KEY")
 
 
 from openai import OpenAI
+import os
 
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
@@ -20,7 +21,6 @@ def get_ai_reply(user_text):
         ]
     )
     return chat_completion.choices[0].message.content
-
 
 
 app = Flask(__name__)
