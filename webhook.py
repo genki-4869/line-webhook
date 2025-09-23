@@ -3,7 +3,7 @@ import requests, json
 
 
 import openai
-openai.api_key = os.environ.get("OPENAI_API_KEY")
+openai.api_key = os.environ.get("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")
 
 def get_ai_reply(user_text):
     response = openai.ChatCompletion.create(
