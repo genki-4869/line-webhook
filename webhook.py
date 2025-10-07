@@ -28,9 +28,6 @@ def get_ai_reply(user_text):
         return "申し訳ありません、AIの応答に失敗しました。"
 
 
-def get_ai_reply(user_text):
-    return f"あなたは「{user_text}」と言いましたね！"
-
 
 
 app = Flask(__name__)
