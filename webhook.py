@@ -21,11 +21,12 @@ def get_ai_reply(user_text):
 
     try:
         result = response.json()
-        print("OpenRouter response:", json.dumps(result, indent=2))  # ← ここでログ確認
+        print("🧠 OpenRouter response:", json.dumps(result, indent=2))  # ← ここでログ確認
         return result["choices"][0]["message"]["content"]
     except Exception as e:
-        print("Error parsing OpenRouter response:", e)
+        print("⚠️ Error parsing OpenRouter response:", e)
         return "申し訳ありません、AIの応答に失敗しました。"
+
 
 
 
