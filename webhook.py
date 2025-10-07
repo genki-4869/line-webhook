@@ -21,6 +21,10 @@ def get_ai_reply(user_text):
     return response.json()["choices"][0]["message"]["content"]
 
 
+def get_ai_reply(user_text):
+    return f"あなたは「{user_text}」と言いましたね！"
+
+
 
 app = Flask(__name__)
 
