@@ -10,7 +10,7 @@ def get_ai_reply(user_text):
     }
 
     data = {
-        "model": "mistralai/mistral-7b-instruct",  # 他にも選べます
+        "model": "mistralai/mistral-7b-instruct",
         "messages": [
             {"role": "system", "content": "あなたはLINE Botとして、親切で賢く、簡潔にユーザーの質問に答えます。"},
             {"role": "user", "content": user_text}
@@ -18,7 +18,14 @@ def get_ai_reply(user_text):
     }
 
     response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=data)
-    return response.json()["choices"][0]["message"]["content"]
+
+    try:
+        result = response.json()
+        print("OpenRouter response:", json.dumps(result, indent=2))  # ← ここでログ確認
+        return result["choices"][0]["message"]["content"]
+    except Exception as e:
+        print("Error parsing OpenRouter response:", e)
+        return "申し訳ありません、AIの応答に失敗しました。"
 
 
 def get_ai_reply(user_text):
