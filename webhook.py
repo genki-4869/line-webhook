@@ -1,26 +1,25 @@
 from flask import Flask, request
 import requests, json
-import openai
-
-
 import os
-openai.api_key = os.environ.get("OPENAI_API_KEY")
-
-
-from openai import OpenAI
-import os
-
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+import requests
 
 def get_ai_reply(user_text):
-    chat_completion = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
+    headers = {
+        "Authorization": f"Bearer {os.environ.get('OPENROUTER_API_KEY')}",
+        "Content-Type": "application/json"
+    }
+
+    data = {
+        "model": "mistralai/mistral-7b-instruct",  # 他にも選べます
+        "messages": [
             {"role": "system", "content": "あなたはLINE Botとして、親切で賢く、簡潔にユーザーの質問に答えます。"},
             {"role": "user", "content": user_text}
         ]
-    )
-    return chat_completion.choices[0].message.content
+    }
+
+    response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=data)
+    return response.json()["choices"][0]["message"]["content"]
+
 
 
 app = Flask(__name__)
