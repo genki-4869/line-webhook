@@ -3,6 +3,8 @@ import requests, json
 import os
 import requests
 
+app = Flask(__name__)
+
 def extract_task_info(user_text):
     headers = {
         "Authorization": f"Bearer {os.environ.get('OPENROUTER_API_KEY')}",
@@ -93,7 +95,6 @@ def webhook():
 
 
 
-app = Flask(__name__)
 
 
 ACCESS_TOKEN = '1eWjiMP/MusTUmfEnR9mo48kJNHHJLmz+C0c8v+74ogqym1YGRryOLQWcASizMORchMZLqw1PnunoZr8CnfDzgLeF2wUF46o3Cx7wFKt6GXftfYzDwbcxlh9RXYvZr9sfHOI2EzCUzHcw9BiSQf39wdB04t89/1O/w1cDnyilFU='
