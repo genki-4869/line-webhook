@@ -1,13 +1,43 @@
 from flask import Flask, request
-import requests, json
-import os
-import requests
+import requests, json, os
+import datetime
 
 app = Flask(__name__)
 
+# LINE Bot設定
+ACCESS_TOKEN = os.environ.get("ACCESS_TOKEN")
+REPLY_API = 'https://api.line.me/v2/bot/message/reply'
+
+# OpenRouter設定
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+MODEL_NAME = "mistralai/mistral-7b-instruct"
+
+# 課題データ（メモリ保存）
+tasks = []
+
+def add_task(user_id, subject, description, deadline):
+    tasks.append({
+        "user_id": user_id,
+        "subject": subject,
+        "description": description,
+        "deadline": deadline
+    })
+
+def list_tasks(user_id):
+    return [t for t in tasks if t["user_id"] == user_id]
+
+def get_upcoming_tasks(user_id):
+    today = datetime.date.today()
+    return [
+        t for t in tasks
+        if t["user_id"] == user_id and
+           datetime.date.fromisoformat(t["deadline"]) <= today + datetime.timedelta(days=2)
+    ]
+
 def extract_task_info(user_text):
     headers = {
-        "Authorization": f"Bearer {os.environ.get('OPENROUTER_API_KEY')}",
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json"
     }
 
@@ -17,11 +47,11 @@ def extract_task_info(user_text):
     ]
 
     data = {
-        "model": "mistralai/mistral-7b-instruct",
+        "model": MODEL_NAME,
         "messages": messages
     }
 
-    response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=data)
+    response = requests.post(OPENROUTER_URL, headers=headers, json=data)
     result = response.json()
     reply = result["choices"][0]["message"]["content"]
 
@@ -31,26 +61,25 @@ def extract_task_info(user_text):
     except:
         return None
 
+def get_ai_reply(user_text):
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json"
+    }
 
+    messages = [
+        {"role": "system", "content": "あなたはLINE Botとして、親切で賢く、簡潔にユーザーの質問に答えます。"},
+        {"role": "user", "content": user_text}
+    ]
 
+    data = {
+        "model": MODEL_NAME,
+        "messages": messages
+    }
 
-
-tasks = []
-
-def add_task(subject, description, deadline):
-    tasks.append({
-        "subject": subject,
-        "description": description,
-        "deadline": deadline
-    })
-
-def list_tasks():
-    return tasks
-
-def get_upcoming_tasks():
-    today = datetime.date.today()
-    return [t for t in tasks if datetime.date.fromisoformat(t["deadline"]) <= today + datetime.timedelta(days=2)]
-
+    response = requests.post(OPENROUTER_URL, headers=headers, json=data)
+    result = response.json()
+    return result["choices"][0]["message"]["content"]
 
 @app.route("/webhook", methods=['POST'])
 def webhook():
@@ -59,26 +88,33 @@ def webhook():
         if event['type'] == 'message' and event['message']['type'] == 'text':
             user_text = event['message']['text']
             reply_token = event['replyToken']
+            user_id = event['source']['userId']
 
+            # 課題一覧
             if "課題一覧" in user_text:
-                task_list = list_tasks()
+                task_list = list_tasks(user_id)
                 if task_list:
                     message = "\n".join([f"{t['subject']}：{t['description']}（{t['deadline']}）" for t in task_list])
                 else:
                     message = "今は登録されている課題はありません。"
+
+            # 締切リマインド
             elif "締切" in user_text or "リマインド" in user_text:
-                upcoming = get_upcoming_tasks()
+                upcoming = get_upcoming_tasks(user_id)
                 if upcoming:
                     message = "\n".join([f"{t['subject']}：{t['description']}（{t['deadline']}）" for t in upcoming])
                 else:
                     message = "直近の締切はありません。"
+
+            # 課題登録（AI抽出）
             else:
                 task = extract_task_info(user_text)
                 if task:
-                    add_task(task["subject"], task["description"], task["deadline"])
+                    add_task(user_id, task["subject"], task["description"], task["deadline"])
                     message = f"{task['subject']}の課題「{task['description']}」を{task['deadline']}までに登録しました！"
                 else:
-                    message = "課題として認識できませんでした。もう一度教えてください。"
+                    # 通常のAI応答
+                    message = get_ai_reply(user_text)
 
             reply_data = {
                 "replyToken": reply_token,
@@ -93,43 +129,9 @@ def webhook():
             requests.post(REPLY_API, headers=headers, data=json.dumps(reply_data))
     return "OK"
 
-
-
-
-
-ACCESS_TOKEN = '1eWjiMP/MusTUmfEnR9mo48kJNHHJLmz+C0c8v+74ogqym1YGRryOLQWcASizMORchMZLqw1PnunoZr8CnfDzgLeF2wUF46o3Cx7wFKt6GXftfYzDwbcxlh9RXYvZr9sfHOI2EzCUzHcw9BiSQf39wdB04t89/1O/w1cDnyilFU='
-REPLY_API = 'https://api.line.me/v2/bot/message/reply'
-
-
-@app.route("/webhook", methods=['POST'])
-def webhook():
-    body = request.json
-    for event in body['events']:
-        if event['type'] == 'message' and event['message']['type'] == 'text':
-            reply_token = event['replyToken']
-            user_text = event['message']['text']
-
-            ai_text = get_ai_reply(user_text)
-
-            reply_data = {
-                "replyToken": reply_token,
-                "messages": [
-                    {
-                        "type": "text",
-                        "text": ai_text
-                    }
-                ]
-            }
-
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {ACCESS_TOKEN}"
-            }
-            requests.post(REPLY_API, headers=headers, data=json.dumps(reply_data))
-    return "OK"
-
-
-import os
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
