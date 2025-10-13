@@ -32,7 +32,7 @@ def get_upcoming_tasks(user_id):
     return [
         t for t in tasks
         if t["user_id"] == user_id and
-           datetime.date.fromisoformat(t["deadline"]) <= today + datetime.timedelta(days=2)
+           datetime.date.fromisoformat(t["deadline"]) <= today + datetime.timedelta(days=7)
     ]
 
 def extract_task_info(user_text):
@@ -80,11 +80,15 @@ def webhook():
 
             # 締切リマインド
             elif "締切" in user_text or "リマインド" in user_text:
-                upcoming = get_upcoming_tasks(user_id)
-                if upcoming:
-                    message = "\n".join([f"{t['subject']}：{t['description']}（{t['deadline']}）" for t in upcoming])
-                else:
-                    message = "直近の締切はありません。"
+    upcoming = get_upcoming_tasks(user_id)
+    if upcoming:
+        message = "1週間以内の締切はこちらです：\n" + "\n".join(
+            [f"{t['subject']}：{t['description']}（{t['deadline']}）" for t in upcoming]
+        )
+    else:
+        message = "1週間以内に締切のある課題はありません。"
+
+
 
             # 課題登録（AI抽出）
             else:
