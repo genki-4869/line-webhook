@@ -42,9 +42,16 @@ def extract_task_info(user_text):
     }
 
     messages = [
-        {"role": "system", "content": "あなたは高校生の課題管理Botです。ユーザーが課題を言ったら、科目・内容・締切を抽出してJSONで返してください。"},
-        {"role": "user", "content": user_text}
-    ]
+    {
+        "role": "system",
+        "content": (
+            "あなたは高校生の課題管理Botです。"
+            "ユーザーが課題を言ったら、科目（subject）、内容（description）、締切（deadline）をJSON形式で返してください。"
+            "曖昧な場合は推測して補完してください。例：『英語作文』→ 英語, 作文, 今日から7日後 など。"
+        )
+    },
+    {"role": "user", "content": user_text}
+]
 
     data = {
         "model": MODEL_NAME,
@@ -97,7 +104,7 @@ def webhook():
                     add_task(user_id, task["subject"], task["description"], task["deadline"])
                     message = f"{task['subject']}の課題「{task['description']}」を{task['deadline']}までに登録しました！"
                 else:
-                    message = "課題として認識できませんでした。もう一度教えてください。"
+                    message = "課題として認識できませんでした。もう一度教えてください。課題を登録したいときは、次のように送ってください：「英語の作文、10月20日まで」「数学の問題集P.32〜35、明日まで」"
 
             reply_data = {
                 "replyToken": reply_token,
