@@ -79,10 +79,14 @@ def webhook():
                     message = "今は登録されている課題はありません。"
 
             # 締切リマインド
-            elif "締切" in user_text or "リマインド" in user_text:upcoming = get_upcoming_tasks(user_id)
+           elif "締切" in user_text or "リマインド" in user_text:
+            　　upcoming = get_upcoming_tasks(user_id)
                 if upcoming:
-                    message = "1週間以内の締切はこちらです：\n" + "\n".join( [f"{t['subject']}：{t['description']}（{t['deadline']}）" for t in upcoming])
-                    else:message = "1週間以内に締切のある課題はありません。"
+                    message = "1週間以内の締切はこちらです：\n" + "\n".join(
+                        [f"{t['subject']}：{t['description']}（{t['deadline']}）" for t in upcoming]
+                    )
+                else:
+                    message = "1週間以内に締切のある課題はありません。"
 
 
 
