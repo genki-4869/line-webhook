@@ -61,26 +61,6 @@ def extract_task_info(user_text):
     except:
         return None
 
-def get_ai_reply(user_text):
-    headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "Content-Type": "application/json"
-    }
-
-    messages = [
-        {"role": "system", "content": "あなたはLINE Botとして、親切で賢く、簡潔にユーザーの質問に答えます。"},
-        {"role": "user", "content": user_text}
-    ]
-
-    data = {
-        "model": MODEL_NAME,
-        "messages": messages
-    }
-
-    response = requests.post(OPENROUTER_URL, headers=headers, json=data)
-    result = response.json()
-    return result["choices"][0]["message"]["content"]
-
 @app.route("/webhook", methods=['POST'])
 def webhook():
     body = request.json
@@ -113,8 +93,7 @@ def webhook():
                     add_task(user_id, task["subject"], task["description"], task["deadline"])
                     message = f"{task['subject']}の課題「{task['description']}」を{task['deadline']}までに登録しました！"
                 else:
-                    # 通常のAI応答
-                    message = get_ai_reply(user_text)
+                    message = "課題として認識できませんでした。もう一度教えてください。"
 
             reply_data = {
                 "replyToken": reply_token,
@@ -128,10 +107,6 @@ def webhook():
 
             requests.post(REPLY_API, headers=headers, data=json.dumps(reply_data))
     return "OK"
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
