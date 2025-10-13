@@ -1,40 +1,25 @@
 from flask import Flask, request
 import requests, json, os
 import datetime
+from supabase import create_client, Client
 
 app = Flask(__name__)
 
 # LINE Bot設定
 ACCESS_TOKEN = os.environ.get("ACCESS_TOKEN")
-REPLY_API = 'https://api.line.me/v2/bot/message/reply'
+REPLY_API = "https://api.line.me/v2/bot/message/reply"
+
+# Supabase設定
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # OpenRouter設定
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 MODEL_NAME = "mistralai/mistral-7b-instruct"
 
-# 課題データ（メモリ保存）
-tasks = []
-
-def add_task(user_id, subject, description, deadline):
-    tasks.append({
-        "user_id": user_id,
-        "subject": subject,
-        "description": description,
-        "deadline": deadline
-    })
-
-def list_tasks(user_id):
-    return [t for t in tasks if t["user_id"] == user_id]
-
-def get_upcoming_tasks(user_id):
-    today = datetime.date.today()
-    return [
-        t for t in tasks
-        if t["user_id"] == user_id and
-           datetime.date.fromisoformat(t["deadline"]) <= today + datetime.timedelta(days=7)
-    ]
-
+# 課題抽出（OpenRouter）
 def extract_task_info(user_text):
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
@@ -42,16 +27,17 @@ def extract_task_info(user_text):
     }
 
     messages = [
-    {
-        "role": "system",
-        "content": (
-            "あなたは高校生の課題管理Botです。"
-            "ユーザーが課題を言ったら、科目（subject）、内容（description）、締切（deadline）をJSON形式で返してください。"
-            "曖昧な場合は推測して補完してください。例：『英語作文』→ 英語, 作文, 今日から7日後 など。"
-        )
-    },
-    {"role": "user", "content": user_text}
-]
+        {
+            "role": "system",
+            "content": (
+                "あなたは高校生の課題管理Botです。"
+                "ユーザーが課題を言ったら、科目（subject）、内容（description）、締切（deadline）をJSON形式で返してください。"
+                "曖昧な場合は補完してください。例：『英語作文』→ 英語, 作文, 今日から7日後 など。"
+                "必ずJSONのみを返してください。"
+            )
+        },
+        {"role": "user", "content": user_text}
+    ]
 
     data = {
         "model": MODEL_NAME,
@@ -64,47 +50,69 @@ def extract_task_info(user_text):
 
     try:
         task = json.loads(reply)
-        return task  # {"subject": "...", "description": "...", "deadline": "..."}
+        return task
     except:
         return None
 
-@app.route("/webhook", methods=['POST'])
+# Supabase操作
+def add_task(user_id, subject, description, deadline):
+    supabase.table("tasks").insert({
+        "user_id": user_id,
+        "subject": subject,
+        "description": description,
+        "deadline": deadline
+    }).execute()
+
+def list_tasks(user_id):
+    response = supabase.table("tasks").select("*").eq("user_id", user_id).execute()
+    return response.data
+
+def get_upcoming_tasks(user_id):
+    today = datetime.date.today()
+    next_week = today + datetime.timedelta(days=7)
+    response = supabase.table("tasks").select("*")\
+        .eq("user_id", user_id)\
+        .lte("deadline", next_week.isoformat())\
+        .execute()
+    return response.data
+
+# Webhookエンドポイント
+@app.route("/webhook", methods=["POST"])
 def webhook():
     body = request.json
-    for event in body['events']:
-        if event['type'] == 'message' and event['message']['type'] == 'text':
-            user_text = event['message']['text']
-            reply_token = event['replyToken']
-            user_id = event['source']['userId']
+    for event in body["events"]:
+        if event["type"] == "message" and event["message"]["type"] == "text":
+            user_text = event["message"]["text"]
+            reply_token = event["replyToken"]
+            user_id = event["source"]["userId"]
 
-            # 課題一覧
             if "課題一覧" in user_text:
                 task_list = list_tasks(user_id)
                 if task_list:
-                    message = "\n".join([f"{t['subject']}：{t['description']}（{t['deadline']}）" for t in task_list])
+                    message = "\n".join([
+                        f"{t['subject']}：{t['description']}（{t['deadline']}）"
+                        for t in task_list
+                    ])
                 else:
                     message = "今は登録されている課題はありません。"
 
-            # 締切リマインド
             elif "締切" in user_text or "リマインド" in user_text:
                 upcoming = get_upcoming_tasks(user_id)
                 if upcoming:
-                    message = "1週間以内の締切はこちらです：\n" + "\n".join(
-                        [f"{t['subject']}：{t['description']}（{t['deadline']}）" for t in upcoming]
-                    )
+                    message = "1週間以内の締切はこちらです：\n" + "\n".join([
+                        f"{t['subject']}：{t['description']}（{t['deadline']}）"
+                        for t in upcoming
+                    ])
                 else:
                     message = "1週間以内に締切のある課題はありません。"
 
-
-
-            # 課題登録（AI抽出）
             else:
                 task = extract_task_info(user_text)
                 if task:
                     add_task(user_id, task["subject"], task["description"], task["deadline"])
                     message = f"{task['subject']}の課題「{task['description']}」を{task['deadline']}までに登録しました！"
                 else:
-                    message = "課題として認識できませんでした。もう一度教えてください。課題を登録したいときは、次のように送ってください：「英語の作文、10月20日まで」「数学の問題集P.32〜35、明日まで」"
+                    message = "課題として認識できませんでした。もう一度教えてください。"
 
             reply_data = {
                 "replyToken": reply_token,
@@ -119,6 +127,7 @@ def webhook():
             requests.post(REPLY_API, headers=headers, data=json.dumps(reply_data))
     return "OK"
 
+# Flask起動
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
