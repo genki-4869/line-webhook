@@ -3,31 +3,93 @@ import requests, json
 import os
 import requests
 
-def get_ai_reply(user_text):
+def extract_task_info(user_text):
     headers = {
         "Authorization": f"Bearer {os.environ.get('OPENROUTER_API_KEY')}",
         "Content-Type": "application/json"
     }
 
+    messages = [
+        {"role": "system", "content": "あなたは高校生の課題管理Botです。ユーザーが課題を言ったら、科目・内容・締切を抽出してJSONで返してください。"},
+        {"role": "user", "content": user_text}
+    ]
+
     data = {
         "model": "mistralai/mistral-7b-instruct",
-        "messages": [
-            {"role": "system", "content": "あなたは高校生の課題を管理するマネージャーとして、親切で賢く課題を管理します。もし、ユーザーから「〈科目〉〈期限〉〈内容〉」のように送られてきたら、それをわかりやすく、「https://1drv.ms/x/c/872cd97812562503/EeDbrmDmvF9Pmt49JFWxqzwBKDyzqA3K9XG-2yHdSZdhGw?e=VU5KfL」このファイルにまとめてください。ファイルに保存できたら、保存した内容を返答してください。また、「課題を確認する」と送られてきたら、送られた日にちから一週間以内の課題を表示してください。"},
-            {"role": "user", "content": user_text}
-        ]
+        "messages": messages
     }
 
     response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=data)
+    result = response.json()
+    reply = result["choices"][0]["message"]["content"]
 
     try:
-        result = response.json()
-        print("🧠 OpenRouter response:", json.dumps(result, indent=2))  # ← ここでログ確認
-        return result["choices"][0]["message"]["content"]
-    except Exception as e:
-        print("⚠️ Error parsing OpenRouter response:", e)
-        return "申し訳ありません、AIの応答に失敗しました。"
+        task = json.loads(reply)
+        return task  # {"subject": "...", "description": "...", "deadline": "..."}
+    except:
+        return None
 
 
+
+
+
+tasks = []
+
+def add_task(subject, description, deadline):
+    tasks.append({
+        "subject": subject,
+        "description": description,
+        "deadline": deadline
+    })
+
+def list_tasks():
+    return tasks
+
+def get_upcoming_tasks():
+    today = datetime.date.today()
+    return [t for t in tasks if datetime.date.fromisoformat(t["deadline"]) <= today + datetime.timedelta(days=2)]
+
+
+@app.route("/webhook", methods=['POST'])
+def webhook():
+    body = request.json
+    for event in body['events']:
+        if event['type'] == 'message' and event['message']['type'] == 'text':
+            user_text = event['message']['text']
+            reply_token = event['replyToken']
+
+            if "課題一覧" in user_text:
+                task_list = list_tasks()
+                if task_list:
+                    message = "\n".join([f"{t['subject']}：{t['description']}（{t['deadline']}）" for t in task_list])
+                else:
+                    message = "今は登録されている課題はありません。"
+            elif "締切" in user_text or "リマインド" in user_text:
+                upcoming = get_upcoming_tasks()
+                if upcoming:
+                    message = "\n".join([f"{t['subject']}：{t['description']}（{t['deadline']}）" for t in upcoming])
+                else:
+                    message = "直近の締切はありません。"
+            else:
+                task = extract_task_info(user_text)
+                if task:
+                    add_task(task["subject"], task["description"], task["deadline"])
+                    message = f"{task['subject']}の課題「{task['description']}」を{task['deadline']}までに登録しました！"
+                else:
+                    message = "課題として認識できませんでした。もう一度教えてください。"
+
+            reply_data = {
+                "replyToken": reply_token,
+                "messages": [{"type": "text", "text": message}]
+            }
+
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {ACCESS_TOKEN}"
+            }
+
+            requests.post(REPLY_API, headers=headers, data=json.dumps(reply_data))
+    return "OK"
 
 
 
