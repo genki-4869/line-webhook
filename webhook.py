@@ -33,9 +33,9 @@ def extract_task_info(user_text):
             "content": (
                 "あなたは高校生の課題管理Botです。"
                 "ユーザーが課題を言ったら、科目（subject）、内容（description）、締切（deadline）をJSON形式で返してください。"
-                "科目は国語、数学などだけではないので柔軟に受け入れてください。"
                 "締切は必ず YYYY-MM-DD の形式で返してください（例：2025-10-17）。"
-                "曖昧な場合は今日から7日後を締切として補完してください。"
+                "年が省略された場合は今年として補完してください。"
+                "曖昧な場合は推測して補完してください。例：『英語作文』→ 英語, 作文, 今日から7日後 など。"
                 "必ずJSONのみを返してください。"
             )
         },
@@ -60,9 +60,11 @@ def extract_task_info(user_text):
 # 日付補正
 def normalize_date(date_str):
     try:
-        return parser.parse(date_str).date().isoformat()
+        parsed = parser.parse(date_str, default=datetime.datetime(datetime.date.today().year, 1, 1))
+        return parsed.date().isoformat()
     except:
         return None
+
 
 # Supabase操作
 def add_task(user_id, subject, description, deadline):
