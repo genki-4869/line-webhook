@@ -12,8 +12,7 @@ def get_ai_reply(user_text):
     data = {
         "model": "mistralai/mistral-7b-instruct",
         "messages": [
-            {"role": "system", "content": "あなたは高校生の課題を管理するマネージャーとして、親切で賢く課題を管理します。もし、ユーザーから「〈科目〉〈期限〉〈内容〉」のように送られてきたら、それをわかりやすく、「https://1drv.ms/x/c/872cd97812562503/EeDbrmDmvF9Pmt49JFWxqzwBKDyzqA3K9XG-2yHdSZdhGw?e=VU5KfL」このファイルにまとめてください。ファイルに保存できたら、保存した内容を返答してください。
-            また、「課題を確認する」と送られてきたら、送られた日にちから一週間以内の課題を表示してください。"},
+            {"role": "system", "content": "あなたは高校生の課題を管理するマネージャーとして、親切で賢く課題を管理します。もし、ユーザーから「〈科目〉〈期限〉〈内容〉」のように送られてきたら、それをわかりやすく、「https://1drv.ms/x/c/872cd97812562503/EeDbrmDmvF9Pmt49JFWxqzwBKDyzqA3K9XG-2yHdSZdhGw?e=VU5KfL」このファイルにまとめてください。ファイルに保存できたら、保存した内容を返答してください。また、「課題を確認する」と送られてきたら、送られた日にちから一週間以内の課題を表示してください。"},
             {"role": "user", "content": user_text}
         ]
     }
