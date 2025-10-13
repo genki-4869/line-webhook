@@ -2,6 +2,7 @@ from flask import Flask, request
 import requests, json, os
 import datetime
 from supabase import create_client, Client
+from dateutil import parser
 
 app = Flask(__name__)
 
@@ -28,15 +29,15 @@ def extract_task_info(user_text):
 
     messages = [
         {
-    "role": "system",
-    "content": (
-        "あなたは高校生の課題管理Botです。"
-        "ユーザーが課題を言ったら、科目（subject）、内容（description）、締切（deadline）をJSON形式で返してください。"
-        "締切は必ず YYYY-MM-DD の形式で返してください（例：2025-10-17）。"
-        "曖昧な場合は今日から7日後を締切として補完してください。"
-        "必ずJSONのみを返してください。"
-    )
-},
+            "role": "system",
+            "content": (
+                "あなたは高校生の課題管理Botです。"
+                "ユーザーが課題を言ったら、科目（subject）、内容（description）、締切（deadline）をJSON形式で返してください。"
+                "締切は必ず YYYY-MM-DD の形式で返してください（例：2025-10-17）。"
+                "曖昧な場合は今日から7日後を締切として補完してください。"
+                "必ずJSONのみを返してください。"
+            )
+        },
         {"role": "user", "content": user_text}
     ]
 
@@ -55,24 +56,12 @@ def extract_task_info(user_text):
     except:
         return None
 
-
-
-from dateutil import parser
-
+# 日付補正
 def normalize_date(date_str):
     try:
         return parser.parse(date_str).date().isoformat()
     except:
         return None
-
-
-
-task["deadline"] = normalize_date(task["deadline"])
-if not task["deadline"]:
-    message = "締切日が正しく認識できませんでした。もう一度教えてください。"
-    return "OK"
-
-
 
 # Supabase操作
 def add_task(user_id, subject, description, deadline):
@@ -129,10 +118,18 @@ def webhook():
             else:
                 task = extract_task_info(user_text)
                 if task:
-                    add_task(user_id, task["subject"], task["description"], task["deadline"])
-                    message = f"{task['subject']}の課題「{task['description']}」を{task['deadline']}までに登録しました！"
+                    task["deadline"] = normalize_date(task["deadline"])
+                    if not task["deadline"]:
+                        message = "締切日が正しく認識できませんでした。もう一度教えてください。"
+                    else:
+                        add_task(user_id, task["subject"], task["description"], task["deadline"])
+                        message = f"{task['subject']}の課題「{task['description']}」を{task['deadline']}までに登録しました！"
                 else:
-                    message = "課題として認識できませんでした。もう一度教えてください。課題を登録したいときは、次のように送ってください：「英語の作文、10月20日まで」「数学の問題集P.32〜35、明日まで」"
+                    message = (
+                        "課題として認識できませんでした。もう一度教えてください。\n"
+                        "課題を登録したいときは、次のように送ってください：\n"
+                        "「英語の作文、10月20日まで」\n「数学の問題集P.32〜35、明日まで」"
+                    )
 
             reply_data = {
                 "replyToken": reply_token,
