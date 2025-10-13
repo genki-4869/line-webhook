@@ -112,7 +112,7 @@ def webhook():
                     add_task(user_id, task["subject"], task["description"], task["deadline"])
                     message = f"{task['subject']}の課題「{task['description']}」を{task['deadline']}までに登録しました！"
                 else:
-                    message = "課題として認識できませんでした。もう一度教えてください。"
+                    message = "課題として認識できませんでした。もう一度教えてください。課題を登録したいときは、次のように送ってください：「英語の作文、10月20日まで」「数学の問題集P.32〜35、明日まで」"
 
             reply_data = {
                 "replyToken": reply_token,
