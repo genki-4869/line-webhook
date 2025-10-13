@@ -54,6 +54,25 @@ def extract_task_info(user_text):
     except:
         return None
 
+
+
+from dateutil import parser
+
+def normalize_date(date_str):
+    try:
+        return parser.parse(date_str).date().isoformat()
+    except:
+        return None
+
+
+
+task["deadline"] = normalize_date(task["deadline"])
+if not task["deadline"]:
+    message = "締切日が正しく認識できませんでした。もう一度教えてください。"
+    return "OK"
+
+
+
 # Supabase操作
 def add_task(user_id, subject, description, deadline):
     supabase.table("tasks").insert({
