@@ -28,14 +28,15 @@ def extract_task_info(user_text):
 
     messages = [
         {
-            "role": "system",
-            "content": (
-                "あなたは高校生の課題管理Botです。"
-                "ユーザーが課題を言ったら、科目（subject）、内容（description）、締切（deadline）をJSON形式で返してください。"
-                "曖昧な場合は補完してください。例：『英語作文』→ 英語, 作文, 今日から7日後 など。"
-                "必ずJSONのみを返してください。"
-            )
-        },
+    "role": "system",
+    "content": (
+        "あなたは高校生の課題管理Botです。"
+        "ユーザーが課題を言ったら、科目（subject）、内容（description）、締切（deadline）をJSON形式で返してください。"
+        "締切は必ず YYYY-MM-DD の形式で返してください（例：2025-10-17）。"
+        "曖昧な場合は今日から7日後を締切として補完してください。"
+        "必ずJSONのみを返してください。"
+    )
+},
         {"role": "user", "content": user_text}
     ]
 
