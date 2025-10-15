@@ -148,6 +148,12 @@ def webhook():
             requests.post(REPLY_API, headers=headers, data=json.dumps(reply_data))
     return "OK"
 
+# Pingエンドポイント（Renderのスリープ防止用）
+@app.route("/ping", methods=["GET"])
+def ping():
+    return "pong", 200
+
+
 # Flask起動
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
