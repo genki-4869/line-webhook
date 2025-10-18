@@ -121,6 +121,18 @@ def webhook():
                     message = "1週間以内に締切のある課題はありません。"
 
             else:
+                # 略語が含まれていたらヒントを追加
+                abbreviation_hints = {
+                    "EC": "（ECは科目名です）",
+                    "論国": "（論国は科目名です）",
+                    "論表": "（論表は科目名です）",
+                    "数Ⅱ":"(数Ⅱは科目名です)",
+                    "数B":"(数Bは科目名です)"
+                }
+
+                for abbr, hint in abbreviation_hints.items():
+                    if abbr in user_text:
+                        user_text += hint
                 task = extract_task_info(user_text)
                 if task:
                     task["deadline"] = normalize_date(task["deadline"])
